@@ -1,1 +1,2 @@
-yes;echo Esecuzione completata! && pause
+yes;mkdir "%UserProfile%\Desktop\GWEHG43GDS"
+
