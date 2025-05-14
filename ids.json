@@ -1,0 +1,6 @@
+{
+  "clients": [
+    { "machine": "XYZ-1", "id": 1 },
+    { "machine": "XYZ-2", "id": 2 }
+  ]
+}
